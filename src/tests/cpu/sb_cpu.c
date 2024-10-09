@@ -28,6 +28,8 @@
 
 #include "sysbench.h"
 
+#include <assert.h>
+
 /* CPU test arguments */
 static sb_arg_t cpu_args[] =
 {
@@ -94,12 +96,12 @@ sb_event_t cpu_next_event(int thread_id)
   return req;
 }
 
-int cpu_execute_event(sb_event_t *r, int thread_id)
+int __attribute__((noinline)) cpu_execute_event(sb_event_t *r, int thread_id)
 {
   unsigned long long c;
   unsigned long long l;
   double t;
-  unsigned long long n=0;
+  volatile unsigned long long n=0;
 
   (void)thread_id; /* unused */
   (void)r; /* unused */

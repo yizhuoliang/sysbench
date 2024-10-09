@@ -278,7 +278,7 @@ sb_event_t memory_next_event(int tid)
 # error Unsupported platform.
 #endif
 
-int event_rnd_none(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_rnd_none(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
   (void) tid; /* unused */
@@ -293,14 +293,14 @@ int event_rnd_none(sb_event_t *req, int tid)
 }
 
 
-int event_rnd_read(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_rnd_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
   for (ssize_t i = 0; i <= max_offset; i++)
   {
     size_t offset = (size_t) sb_rand_default(0, max_offset);
-    size_t val = SIZE_T_LOAD(buffers[tid] + offset);
+    volatile size_t val = SIZE_T_LOAD(buffers[tid] + offset);
     (void) val; /* unused */
   }
 
@@ -308,7 +308,7 @@ int event_rnd_read(sb_event_t *req, int tid)
 }
 
 
-int event_rnd_write(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_rnd_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
@@ -322,7 +322,7 @@ int event_rnd_write(sb_event_t *req, int tid)
 }
 
 
-int event_seq_none(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_seq_none(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
@@ -336,13 +336,13 @@ int event_seq_none(sb_event_t *req, int tid)
 }
 
 
-int event_seq_read(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_seq_read(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 
   for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
   {
-    size_t val = SIZE_T_LOAD(buf);
+    volatile size_t val = SIZE_T_LOAD(buf);
     (void) val; /* unused */
   }
 
@@ -350,7 +350,7 @@ int event_seq_read(sb_event_t *req, int tid)
 }
 
 
-int event_seq_write(sb_event_t *req, int tid)
+int __attribute__((noinline)) event_seq_write(sb_event_t *req, int tid)
 {
   (void) req; /* unused */
 

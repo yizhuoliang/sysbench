@@ -77,6 +77,8 @@
 #include "ck_cc.h"
 #include "ck_ring.h"
 
+#include "hrperf_api.h"
+
 #define VERSION_STRING PACKAGE" "PACKAGE_VERSION SB_GIT_SHA
 
 /* Maximum queue length for the tx-rate mode. Must be a power of 2 */
@@ -1141,6 +1143,9 @@ static int run_test(sb_test_t *test)
     }
   }
 
+  // Start hiresperf
+  hrperf_start();
+
   if ((err = sb_thread_create_workers(&worker_thread)))
     return err;
 
@@ -1204,6 +1209,9 @@ static int run_test(sb_test_t *test)
   sb_timer_stop(&sb_exec_timer);
   sb_timer_stop(&sb_intermediate_timer);
   sb_timer_stop(&sb_checkpoint_timer);
+
+  // End hrperf
+  hrperf_pause();
 
   /* Silence periodic reports if they were on */
   ck_pr_store_uint(&sb_globals.report_interval, 0);
