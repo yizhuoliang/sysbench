@@ -138,6 +138,35 @@ AS_IF([test "x$with_pgsql" != "xno"],
    [pgsql_support=no])
 AC_MSG_RESULT([$pgsql_support])
 
+#-------------SETTING UP MACROS FOR ADAPTING LDB-----------------
+
+# Require user to specify LLVM LDB root path
+AC_ARG_WITH([llvm-ldb-root-path],
+    AS_HELP_STRING([--with-llvm-ldb-root-path=PATH],
+                   [Set the root path for LLVM LDB (required)]),
+    [LLVM_LDB_ROOT_PATH="$withval"],
+    [AC_MSG_ERROR([You must specify --with-llvm-ldb-root-path=PATH])])
+
+AC_SUBST([LLVM_LDB_ROOT_PATH])
+
+# Convert provided path to absolute path
+LLVM_LDB_ROOT_PATH=`cd "$LLVM_LDB_ROOT_PATH" && pwd`
+
+# Set custom compiler and preprocessor
+CC="$LLVM_LDB_ROOT_PATH/build/bin/clang"
+CPP="$LLVM_LDB_ROOT_PATH/build/bin/clang -E"
+
+# Set LDB-required flags and libraries
+LLVM_LDB_CFLAGS="-O3 -g -fdebug-default-version=3 -fno-omit-frame-pointer -funroll-loops"
+LLVM_LDB_CPPFLAGS="-I$LLVM_LDB_ROOT_PATH/ -I$LLVM_LDB_ROOT_PATH/libldb/include"
+LLVM_LDB_LDFLAGS="-O3 -g -fdebug-default-version=3 -fno-omit-frame-pointer -lpthread"
+LLVM_LDB_LIBS="$LLVM_LDB_ROOT_PATH/libldb/libldb.a -lm"
+
+AC_SUBST([LLVM_LDB_CFLAGS])
+AC_SUBST([LLVM_LDB_CPPFLAGS])
+AC_SUBST([LLVM_LDB_LDFLAGS])
+AC_SUBST([LLVM_LDB_LIBS])
+
 # Set LuaJIT flags
 SB_LUAJIT
 
@@ -257,7 +286,8 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 save_LIBS="$LIBS"
-LIBS="$PTHREAD_LIBS $LIBS"
+LIBS="${LLVM_LDB_LIBS} $PTHREAD_LIBS $LIBS"
+AC_SUBST(LIBS)
 
 AC_CHECK_FUNCS([ \
 alarm \
@@ -367,11 +397,11 @@ then
   CC_WARNINGS="-v -errtags=yes -errwarn=%all -erroff=E_INTEGER_OVERFLOW_DETECTED -erroff=E_STATEMENT_NOT_REACHED"
 fi
 
-AM_CFLAGS="${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
+AM_CFLAGS="${LLVM_LDB_CFLAGS} ${CC_WARNINGS} ${AM_CFLAGS} ${PTHREAD_CFLAGS}"
 
-AM_CPPFLAGS="${AM_CPPFLAGS} -I\$(top_srcdir)/src ${LUAJIT_CFLAGS} ${CK_CFLAGS}"
+AM_CPPFLAGS="${LLVM_LDB_CPPFLAGS} ${AM_CPPFLAGS} -I\$(top_srcdir)/src ${LUAJIT_CFLAGS} ${CK_CFLAGS}"
 
-AM_LDFLAGS="$PTHREAD_LIBS"
+AM_LDFLAGS="${LLVM_LDB_LDFLAGS} ${AM_LDFLAGS} $PTHREAD_LIBS"
 
 AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CPPFLAGS)
