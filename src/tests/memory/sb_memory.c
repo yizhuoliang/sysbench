@@ -182,7 +182,11 @@ int memory_init(void)
       return 1;
     }
 
-    memset(buffer, 0, memory_block_size);
+    /* Initialize the buffer with the magic number */
+    for (ssize_t j = 0; j < memory_block_size / sizeof(size_t); j++)
+    {
+      buffer[j] = MAGIC_NUMBER;
+    }
   }
 
   thread_counters = malloc(sb_globals.threads * sizeof(uint64_t));
@@ -212,7 +216,11 @@ int memory_init(void)
         return 1;
       }
 
-      memset(buffers[i], 0, memory_block_size);
+      /* Initialize the buffer with the magic number */
+      for (ssize_t j = 0; j < memory_block_size / sizeof(size_t); j++)
+      {
+        buffers[i][j] = MAGIC_NUMBER;
+      }
     }
 
     thread_counters[i] =
@@ -300,8 +308,13 @@ int __attribute__((noinline)) event_rnd_read(sb_event_t *req, int tid)
   for (ssize_t i = 0; i <= max_offset; i++)
   {
     size_t offset = (size_t) sb_rand_default(0, max_offset);
-    volatile size_t val = SIZE_T_LOAD(buffers[tid] + offset);
-    (void) val; /* unused */
+    size_t val = SIZE_T_LOAD(buffers[tid] + offset);
+    if (val != MAGIC_NUMBER)
+    {
+      log_text(LOG_FATAL, "Data corruption detected at buffer index %zu: expected 0x%lX, got 0x%lX",
+               offset, (unsigned long)MAGIC_NUMBER, (unsigned long)val);
+      exit(1);
+    }
   }
 
   return 0;
@@ -342,8 +355,13 @@ int __attribute__((noinline)) event_seq_read(sb_event_t *req, int tid)
 
   for (size_t *buf = buffers[tid], *end = buf + max_offset; buf < end; buf++)
   {
-    volatile size_t val = SIZE_T_LOAD(buf);
-    (void) val; /* unused */
+    size_t val = SIZE_T_LOAD(buf);
+    if (val != MAGIC_NUMBER)
+    {
+      log_text(LOG_FATAL, "Data corruption detected at buffer index %ld: expected 0x%lX, got 0x%lX",
+               buf - buffers[tid], (unsigned long)MAGIC_NUMBER, (unsigned long)val);
+      exit(1);
+    }
   }
 
   return 0;
